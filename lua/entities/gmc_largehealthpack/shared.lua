@@ -1,0 +1,9 @@
+ENT.Base = "base_gmodentity"
+ENT.Type = "anim"
+ENT.PrintName = "Large Health Pack"
+ENT.Author = "Kiddley"
+ENT.Purpose = "A large health pack that restores 100% health. It respawns after 10 seconds, allowing you to use it again."
+ENT.Instructions = "Touch the medkit to restore HP."
+ENT.Spawnable = true
+ENT.AdminSpawnable = true
+ENT.Category = "Garry's Modular Combat"

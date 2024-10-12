@@ -1,0 +1,10 @@
+ENT.Base = "base_gmodentity"
+ENT.Type = "anim"
+ENT.PrintName = "Ammo Pickup"
+ENT.Author = "Kiddley"
+ENT.Purpose = "A configurable ammo pack which will provide the user with the configured ammo and amount."
+ENT.Instructions = "Use the entity to open the weapon selector GUI"
+ENT.Spawnable = false
+ENT.AdminSpawnable = true
+ENT.Category = "Garry's Modular Combat"
+ENT.Icon = "vgui/entities/gmc_smallmedkiticon.vtf"
