@@ -251,23 +251,23 @@ modules = {
 		}
 	}
 }
+--Module logic starts here.
 
--- Module logic goes here
 -- Passive modules
 timer.Create("Armor Regen", 1, 0, function()
 	for k,ply in pairs(player.GetAll()) do
 		local armreg = ply:GetNWInt("shieldregen")
-		local plyAUX = ply:GetNWInt("auxpower")
-		local plyMaxAUX = ply:GetNWInt("maxauxpower")
+		local plyAUX = ply:GetAUX()
+		local plyMaxAUX = ply:GetMaxAUX()
 		if SERVER && (armreg > 0 && !(ply:Armor() >= ply:GetMaxArmor())) then
 			local armorincrease = ply:Armor() + (MOD_ARMR*armreg)
 			if plyAUX > (plyMaxAUX * (MOD_ARMR_MINAUX/100)) then
 				if armorincrease < ply:GetMaxArmor() then
 					ply:SetArmor(armorincrease)
-					ply:SetNWInt("auxpower", plyAUX - (MOD_ARMR * armreg))
+					ply:SetAUX(plyAUX - (MOD_ARMR * armreg))
 				else
 					ply:SetArmor(ply:GetMaxArmor())
-					ply:SetNWInt("auxpower", plyAUX - (armorincrease - ply:GetMaxArmor()))
+					ply:SetAUX(plyAUX - (armorincrease - ply:GetMaxArmor()))
 				end
 			end
 		end
@@ -305,10 +305,10 @@ if SERVER then
 			local weapon = ply:GetActiveWeapon()
 			effectcolor = ply:GetNWVector("EffectColor", Vector(1,1,1)):ToColor()
 			
-			local plyAUX = ply:GetNWInt("auxpower")
+			local plyAUX = ply:GetAUX()
 			
 			if ply:GetNWBool("Crits Active") && plyAUX >= 0 && weapon:IsValid() then
-				ply:SetNWInt("auxpower", plyAUX - (MOD_CRIT_COST/10))
+				ply:SetAUX(plyAUX - (MOD_CRIT_COST/10))
 				weapon:SetMaterial("models/alyx/emptool_glow")
 				weapon:SetColor(effectcolor)
 			elseif ply:GetNWBool("Crits Active") && plyAUX <= 0 then
@@ -334,7 +334,7 @@ if CLIENT then
 			local viewmodel = ply:GetViewModel( 0 )
 			effectcolor = ply:GetNWVector("EffectColor", Vector(1,1,1)):ToColor()
 			
-			local plyAUX = ply:GetNWInt("auxpower")
+			local plyAUX = ply:GetAUX()
 			for k,status in pairs(statuses) do
 				-- So for some reason doing an else statement to set the timer makes the screen flash rapidly. So we just gotta do that in the modules.
 				if timer.Exists(status .. "_" .. ply:EntIndex()) then
@@ -477,9 +477,9 @@ function SameTeam(ent1, ent2)
 end
 
 local function ReduceAuxPower(ply, amount)
-	local plyAUX = ply:GetNWInt("auxpower")
+	local plyAUX = ply:GetAUX()
 	if plyAUX >= amount then
-		ply:SetNWInt("auxpower", plyAUX - amount)
+		ply:SetAUX(plyAUX - amount)
 		return true
 	else
 		return false
@@ -547,7 +547,7 @@ end
 
 local function StartShieldTimer(ply, ent, plyAUX)
 	if plyAUX > (MOD_SHAMP_COST) && ent:GetNWInt("SA CooldownTimer") < 1  then
-		ent:SetNWInt("auxpower", plyAUX - (MOD_SHAMP_COST))
+		ent:SetAUX(plyAUX - (MOD_SHAMP_COST))
 		ent:EmitSound( "npc/scanner/scanner_electric2.wav", 75, 100, 1, CHAN_AUTO)
 		timer.Create("Shamp_" .. ent:EntIndex(), 0.2, ply:GetNWInt("shieldamp") * 5, function()
 			ent:SetNWInt("Shield AmpTimer", timer.RepsLeft("Shamp_" .. ent:EntIndex())/5)
@@ -566,7 +566,7 @@ end
 
 function GMCCast(ply, modid)
 	if modid then
-		local plyAUX = ply:GetNWInt("auxpower")
+		local plyAUX = ply:GetAUX()
 		local weapon = ply:GetActiveWeapon()
 		
 		if ply:GetNWInt(modid) > 0 then
@@ -597,7 +597,7 @@ function GMCCast(ply, modid)
 			-- Crits
 			elseif modid == "crits" then
 				if(plyAUX > MOD_CRIT_COST && !ply:GetNWBool("Crits Active", false)) then
-					ply:SetNWInt("auxpower", plyAUX - (MOD_CRIT_COST))
+					ply:SetAUX(plyAUX - (MOD_CRIT_COST))
 					ply:SetNWBool("Crits Active", true)
 					ply:SetWalkSpeed(math.Round(ply:GetWalkSpeed() * (MOD_CRIT_SLOWDOWN + MOD_CRIT_UPGRADE)))
 					ply:SetRunSpeed(math.Round(ply:GetRunSpeed() * (MOD_CRIT_SLOWDOWN + MOD_CRIT_UPGRADE)))
@@ -637,11 +637,11 @@ net.Receive("UpdateModules", function(len, ply)
         end
     end
 	
-	if lvl != (curlvl + 1) && ply:GetNWInt("plySkillPoints") < 0 && lvl <= maxlvl then
+	if lvl != (curlvl + 1) && ply:GetSP() < 0 && lvl <= maxlvl then
 		PrintMessage(HUD_PRINTTALK, "Attempted cheating detected, " .. ply:Nick() .. "(SteamID: " .. ply:SteamID() .. ") attempted to set their modules in an impossible manner.")
 	else
 		ply:SetNWInt(mod, lvl)
-		ply:SetNWInt("plySkillPoints", ply:GetNWInt("plySkillPoints") - 1)
+		ply:SetSP(ply:GetSP() - 1)
 		if mod == "vitality" then
 			ply:SetMaxHealth(baseMaxHealth + (ply:GetNWInt("vitality") * MOD_VIT))
 			ply:SetHealth(ply:Health() + MOD_VIT)
@@ -654,7 +654,7 @@ net.Receive("UpdateModules", function(len, ply)
 			ply:SetRunSpeed(baseRunSpeed + (baseRunSpeed * (ply:GetNWInt("movespeed") * (MOD_SPD))))
 		end
 		if mod == "auxamount" then
-			ply:SetNWInt("maxauxpower", (baseAUX + (ply:GetNWInt("auxamount") * (MOD_AUX))))
+			ply:SetMaxAUX(baseAUX + (ply:GetNWInt("auxamount") * (MOD_AUX)))
 		end
 	end
 end)

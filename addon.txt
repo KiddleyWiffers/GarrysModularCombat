@@ -1,0 +1,12 @@
+"AddonInfo"
+{
+    "name"          "Garry's Modular Combat"
+    "version"       "1.0"
+    "up_date"       "2023-09-13"     
+    "author_name"   "Kiddley"
+    "author_email"  "dahouse5501@gmail.com"
+    "description"   "A brief description of your addon"
+    "type"          "gamemode"
+    "icon"          "icon64.png"
+    "override"      "0"
+}
