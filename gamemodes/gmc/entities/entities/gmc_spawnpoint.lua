@@ -89,7 +89,7 @@ function ENT:Think()
 			if IsValid(entity) and entity:IsPlayer() then
 				local function AmmoGiver()
 					local ammoType = game.GetAmmoID(option1)
-					local maxAmmo = math.floor(game.GetAmmoMax(ammoType) + (game.GetAmmoMax(ammoType) * (MOD_AMMORES * entity:GetNWInt("ammoreserve"))))
+					local maxAmmo = math.floor(game.GetAmmoMax(ammoType) + (game.GetAmmoMax(ammoType) * (MOD_AMMORES * entity:GetMod("ammoreserve"))))
 					local currentAmmo = entity:GetAmmoCount(ammoType)
 					local ammoToAdd = option2
 
@@ -105,7 +105,7 @@ function ENT:Think()
 							newEntity.ExtraOption3 = option3
 							newEntity:SetPos(position)
 							newEntity:Spawn()
-							newEntity:EmitSound( "items/pumpkin_drop.wav", 200, 100, 0.7, CHAN_AUTO )
+							newEntity:EmitSound( "gmc/pickup_spawn.wav", 200, 100, 0.7, CHAN_STATIC )
 						end)
 					
 						self:Remove()

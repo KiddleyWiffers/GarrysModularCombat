@@ -3,7 +3,7 @@
 	"title"		"Garry's Modular Combat"
 	"base"		"base"
 	"category"	"pve"
-	"maps"		"^dm_"
+	"maps"		"^gmc_,^dm_"
 	"menusystem"    "1"
 	
 }

@@ -14,10 +14,13 @@
 			"
 			"StandardEffects"
 			"
+			ice_bomb
+			ice_bomb_shatter
 			onfire
 			healing_effect
 			healing_drips
 			teleported_flash
+			teleported_flash2
 			teleportedin_blue
 			teleportedin_elecblue
 			teleportedin_green
@@ -37,9 +40,13 @@
 critgun_weaponmodel_colorable
 critgun_weaponmodel_colorable_glow
 peejar_drips_colorable
+ice_bomb
+ice_bomb_shatter
 healing_effect
 healing_drips
 onfire
+teleported_flash
+teleported_flash2
 teleportedin_blue
 teleportedin_elecblue
 teleportedin_green

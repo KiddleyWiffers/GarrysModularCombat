@@ -17,8 +17,9 @@ GAMEMODE_PRINTNAMES = {
 	[4] = "Team Deathmatch",
 }
 
-CreateConVar( "gmc_aux_base", "100", FCVAR_NOTIFY, "What should the base AUX be for all players.", 0)
-CreateConVar( "gmc_respawntime_coop", "10", FCVAR_NOTIFY, "What should the respawn be for coop modes?.", 0)
+CreateConVar( "gmc_aux_base", "100", {FCVAR_NOTIFY, FCVAR_ARCHIVE}, "What should the base AUX be for all players?", 0)
+CreateConVar( "gmc_respawntime_coop", "10", {FCVAR_NOTIFY, FCVAR_ARCHIVE}, "What should the respawn be for coop modes?", 0)
+CreateConVar( "gmc_regen_suppression", "5", {FCVAR_NOTIFY, FCVAR_ARCHIVE}, "How long should regen supression last?", 0)
 -- Loadout convars default values
 local defaultWeapons = "weapon_crowbar weapon_physcannon weapon_pistol weapon_smg1"
 local defaultAmmoTypes = "pistol smg1"
@@ -53,7 +54,7 @@ CreateConVar( "gmc_npc_weapon_drop", "0", FVAR_NOTIFY, "If 0, will prevent NPCs 
 -- Debug=====================================================================================================================================
 if SERVER then
 	net.Receive("cheatRecieve", function(len, ply)
-		if !ply:IsSuperAdmin() then return end
+		--if !ply:IsSuperAdmin() then return end
         local cheat = net.ReadString()
 		local args = net.ReadTable()
 
@@ -67,21 +68,24 @@ if SERVER then
 			ply:SetEXPtoLevel((lvlexpscale * ply:GetLevel()) * lvlexppower)
 		elseif cheat == "gmc_debug_set_sp" then
 			ply:SetSP(tonumber(args[1]))
+		elseif cheat == "gmc_debug_printmymodules" then
+			PrintTable(ply.ModulesData)
 		end
     end)
 end
 
 if CLIENT then
-    function GMCCheatCommand(ply, cmd, args)
+    function GMCDebugCommand(ply, cmd, args)
         net.Start("cheatRecieve")
         net.WriteString(cmd)
         net.WriteTable(args)
         net.SendToServer()
     end
 
-    concommand.Add("gmc_debug_set_exp", GMCCheatCommand, nil, "Set EXP on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
-    concommand.Add("gmc_debug_set_lvl", GMCCheatCommand, nil, "Set LVLs on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
-    concommand.Add("gmc_debug_set_sp", GMCCheatCommand, nil, "Set skill points on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
+    concommand.Add("gmc_debug_set_exp", GMCDebugCommand, nil, "Set EXP on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
+    concommand.Add("gmc_debug_set_lvl", GMCDebugCommand, nil, "Set LVLs on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
+    concommand.Add("gmc_debug_set_sp", GMCDebugCommand, nil, "Set skill points on your current character.", {FCVAR_CHEAT, FCVAR_CLIENTCMD_CAN_EXECUTE})
+	debugvoiceprint = CreateClientConVar( "gmc_debug_printvoicelines", "0", true, false, "Print the voicelines for your currently selected voice.")
 end
 
 -- Modules====================================================================================================================================

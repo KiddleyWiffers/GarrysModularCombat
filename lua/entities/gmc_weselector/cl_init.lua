@@ -6,7 +6,11 @@ end
 
 net.Receive("OpenSpawnGUIMenu", function()
 	entity = net:ReadEntity()
-	OpenSpawnGUI()
+	if entity:GetClass() == "gmc_weselector" then
+		OpenSpawnGUI()
+	elseif entity:GetClass() == "gmc_mapent" then
+		OpenPropGUI()
+	end
 end)
 
 local selectorMenu = nil

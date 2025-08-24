@@ -14,10 +14,11 @@ ENT.Spawnable = true
 ENT.AdminOnly = false
 
 ENT.Damage = 0.5
-ENT.Healing = 0.08
+ENT.Healing = 0.8
 ENT.HealTicks = 10
 ENT.Owner = nil
 ENT.StickTime = 5
+ENT.FriendlyFire = true
 
 function ENT:SpawnFunction(ply, tr, ClassName)
 	if not tr.Hit then return end
@@ -39,6 +40,12 @@ function ENT:Initialize()
 	self:SetMoveType(MOVETYPE_VPHYSICS)
 	self:SetSolid(SOLID_VPHYSICS)
 	self:SetCollisionGroup(COLLISION_GROUP_PROJECTILE)
+	
+	if engine.ActiveGamemode() == "gmc" and self.Level then
+		self.Damage = 0.25 + (0.05 * self.Level)
+		self.HealTicks = 10 + math.floor(0.5 * self.Level)
+		self.FriendlyFire = false
+	end
 
 	local phys = self:GetPhysicsObject()
 	if IsValid(phys) then
@@ -93,21 +100,37 @@ function ENT:PhysicsCollide(data, phys)
 		PdmgInfo:SetAttacker(self.Owner or self)
 		PdmgInfo:SetInflictor(self)
 		-- Set the damage to a percentage of the entities health, but doesn't let this damage go over 200. This prevents tanky NPCs from being nullified by the dart.
-		PdmgInfo:SetDamage(math.Clamp((hitEntity:GetMaxHealth() * self.Damage), 0, math.min((hitEntity:Health() - 1), 200)))
-		PdmgInfo:SetDamageType(DMG_PARALYZE)
+		PdmgInfo:SetDamage(0)
+		PdmgInfo:SetDamageType(DMG_POISON)
 		
-		local HealAmount = PdmgInfo:GetDamage() * self.Healing
+		local HealthReduction = hitEntity:Health() - math.Clamp((hitEntity:GetMaxHealth() * self.Damage), 0, math.min((hitEntity:Health() - 1), 200))
+		local HealAmount = HealthReduction * self.Healing
+		local HealTime = self.HealTicks
 		
-		hitEntity:TakeDamageInfo(PdmgInfo)
+		local function DoLogic()
+			hitEntity:TakeDamageInfo(PdmgInfo)
+			hitEntity:SetHealth(HealthReduction)
 		
-		for i = 1, self.HealTicks do
-			timer.Simple(i, function()
-				if IsValid(hitEntity) and hitEntity:Health() > 0 then
-					hitEntity:SetHealth(math.min(hitEntity:Health() + HealAmount, hitEntity:GetMaxHealth()))
-				end
-			end)
+			for i = 1, HealTime do
+				timer.Simple(i, function()
+					if IsValid(hitEntity) and hitEntity:Health() > 0 then
+						hitEntity:SetHealth(math.min(hitEntity:Health() + math.Round(HealAmount/HealTime), hitEntity:GetMaxHealth()))
+					end
+				end)
+			end
 		end
 		
+		if self.FriendlyFire then
+			DoLogic()
+		else
+			local plyteam = self.Owner:Team()
+			local hitteam = hitEntity.GMCTeam or hitEntity:Team()
+			if plyteam == 5 and hitEntity.Owner != self.Owner and hitEntity != self.Owner then
+				DoLogic()
+			elseif plyteam == hitteam then
+				DoLogic()
+			end
+		end
 		self:Remove()
 	else
 		-- Stick to wall and remove after 5 seconds

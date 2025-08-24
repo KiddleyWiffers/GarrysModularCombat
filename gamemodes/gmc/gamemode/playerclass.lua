@@ -17,11 +17,28 @@ function PLAYER:SetupDataTables()
 	self.Player:NetworkVar("Int", 1, "EXP")
 	self.Player:NetworkVar("Int", 2, "EXPtoLevel")
 	self.Player:NetworkVar("Int", 3, "SP")
+	self.Player:NetworkVar("Int", 4, "NPCKills")
 	self.Player:NetworkVar("Float", 0, "AUX")
 	self.Player:NetworkVar("Float", 1, "MaxAUX")
 	self.Player:NetworkVar("Bool", 0, "Jetpacking")
+	self.Player:NetworkVar("Bool", 0, "Gliding")
 	self.Player:NetworkVar("String", 0, "ActiveSuit")
 	self.Player:NetworkVar("String", 1, "ActiveSuitName")
 end
 
 player_manager.RegisterClass("player_gmc", PLAYER, "player_default")
+
+local meta = FindMetaTable("Player")
+if not meta then
+    error("Failed to find Player metatable!")
+end
+
+-- Function to get a player's specific module level
+function meta:GetMod(mod)
+	if self.ModulesData and self.ModulesData[mod] then
+		return self.ModulesData[mod]
+	elseif mod != "shieldregen" then -- for some reason shield regen throws a false negative even though it still works? I love coding.
+		print("Could not find the module " .. mod .. ".")
+		return 0
+	end
+end

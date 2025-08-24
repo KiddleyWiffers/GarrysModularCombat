@@ -13,24 +13,25 @@ ENT.Category = "Garry's Modular Combat"
 ENT.Spawnable = true
 ENT.AdminOnly = false
 
--- Define customizable values
 ENT.Damage = 0
 ENT.Owner = nil
 ENT.FreezeTime = 8
 ENT.FreezeAmount = 0.5
 ENT.FreezeRadius = 200
 ENT.Detonated = false
-
-if SERVER then
-	util.AddNetworkString("SetFrozenMaterial")
-	util.AddNetworkString("ClearFrozenMaterial")
-end
+ENT.Level = nil
+ENT.FriendlyFire = true
 
 list.Set("OverrideMaterials", "status/frozen", "status/frozen")
 
 function ENT:Initialize()
     self:SetModel("models/weapons/w_models/w_flaregun_shell.mdl")
     self:SetSkin(1)
+	
+	if engine.ActiveGamemode() == "gmc" and self.Level then
+		self.FreezeAmount = (0.1 * self.Level)
+		self.FriendlyFire = true
+	end
     
     self:PhysicsInit(SOLID_VPHYSICS)
     local phys = self:GetPhysicsObject()
@@ -79,30 +80,36 @@ function ENT:SpawnFunction(ply, tr, class)
 end
 
 function ENT:Detonate()
-    -- Find entities within the freeze radius
     local entities = ents.FindInSphere(self:GetPos(), self.FreezeRadius)
     for _, ent in ipairs(entities) do
-        -- If the entity is an NPC or player, apply the freeze effect
-        if ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot() and !ent.IsFrozen then
-            self:ApplyFreezeEffect(ent)
+	if ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot() and !ent.IsFrozen then
+			if self.FriendlyFire then
+				self:ApplyFreezeEffect(ent)
+			else
+				local plyteam = self.Owner:Team()
+				local hitteam = ent.GMCTeam or ent:Team()
+				if plyteam == 5 and ent.Owner != self.Owner and ent != self.Owner then
+					self:ApplyFreezeEffect(ent)
+				elseif plyteam == hitteam then
+					self:ApplyFreezeEffect(ent)
+				end
+			end
         end
     end
 
-    -- Play detonation sound and remove the grenade entity
     self:EmitSound("weapons/gas_can_explode.wav")
-	ParticleEffectAttach("ice_bomb", PATTACH_ABSORIGIN, self, 0)
+	ParticleEffect("ice_bomb", self:GetPos(), Angle(0,0,0))
     self:Remove()
 end
 
 function ENT:ApplyFreezeEffect(ent)
-	if !ent.FreezeActive then
+	if !ent:GetNWBool("FreezeActive", false) then
 		if ent:IsPlayer() then
-			-- Slow down the player
 			ent.originalWalkSpeed = ent:GetWalkSpeed()
 			ent.originalRunSpeed = ent:GetRunSpeed()
 			if self.FreezeAmount > 0 then
-				ent:SetWalkSpeed(ent.originalWalkSpeed * self.FreezeAmount)
-				ent:SetRunSpeed(ent.originalRunSpeed * self.FreezeAmount)
+				ent:SetWalkSpeed(math.Clamp(ent.originalWalkSpeed - (ent.originalWalkSpeed * self.FreezeAmount), 1, 400))
+				ent:SetRunSpeed(math.Clamp(ent.originalRunSpeed - (ent.originalRunSpeed * self.FreezeAmount), 1, 400))
 			else
 				ent:SetWalkSpeed(1)
 				ent:SetRunSpeed(1)
@@ -112,48 +119,39 @@ function ENT:ApplyFreezeEffect(ent)
 			
 			local weapon = ent:GetActiveWeapon()
 			if IsValid(weapon) then
-				weapon:SetMaterial("status/frozen")  -- Set the world model material
-				local viewModel = ent:GetViewModel()  -- Get the viewmodel for the player
-				if IsValid(viewModel) then
-					net.Start("SetFrozenMaterial")
-					net.Send(ent)
-				end
+				weapon:SetMaterial("status/frozen")
 			end
 			
-			ent.FreezeActive = true
+			ent:SetNWBool("FreezeActive", true)
 		elseif ent:IsNPC() then
-			-- Apply the freeze effect to NPCs
-			ent.FreezeActive = true  -- Mark the entity as frozen
-			
+			ent:SetNWBool("FreezeActive", true)
 			ent:SetMaterial("status/frozen")
 			
 			local weapon = ent:GetActiveWeapon()
 			if IsValid(weapon) then
-				weapon:SetMaterial("status/frozen")  -- Set the world model material
+				weapon:SetMaterial("status/frozen")
 			end
 			
-			-- Freeze the NPC's angles (prevents turning)
-			ent.FrozenAngles = ent:GetAngles()  -- Store original angles
-			ent.FrozenPos = ent:GetPos()  -- Store original angles
-			
+			ent.FrozenAngles = ent:GetAngles()
+			ent.FrozenPos = ent:GetPos()
 			ent:NextThink(CurTime() + self.FreezeTime)
 		elseif ent:IsNextBot() then
-			-- Apply the freeze effect to NPCs
-			ent.FreezeActive = true  -- Mark the entity as frozen
-			
+			ent:SetNWBool("FreezeActive", true)
 			ent:SetMaterial("status/frozen")
 			
 			local weapon = ent:GetActiveWeapon()
 			if IsValid(weapon) then
-				weapon:SetMaterial("status/frozen")  -- Set the world model material
+				weapon:SetMaterial("status/frozen")
 			end
 			
 			ent.FrozenPos = ent:GetPos()
 			ent:NextThink(CurTime() + self.FreezeTime)
 		end
-		-- Restore speed after the freeze time
+
 		timer.Simple(self.FreezeTime, function()
-			Thaw(ent)
+			if IsValid(ent) then
+				Thaw(ent)
+			end
 		end)
 	end
 end
@@ -166,7 +164,7 @@ function ENT:PhysicsCollide(data, phys)
 end
 
 function Thaw(ent)
-	if IsValid(ent) and ent.FreezeActive then
+	if IsValid(ent) and ent:GetNWBool("FreezeActive", false) then
 		if ent:IsNPC() then
 			timer.Simple(0.01, function() 
 				ent:SetPos(ent.FrozenPos)
@@ -181,62 +179,29 @@ function Thaw(ent)
 			if IsValid(weapon) then
 				local viewModel = ent:GetViewModel()
 				if IsValid(viewModel) then
-					net.Start("ClearFrozenMaterial")
-					net.Send(ent)
+					ent:SetNWBool("FreezeActive", false)
 				end
 			end
 		elseif ent:IsNextBot() then
 			ent:SetPos(ent.FrozenPos)
 		end
 		
-		ent.FreezeActive = false
+		ent:SetNWBool("FreezeActive", false)
 		ent:SetMaterial("")
 		
 		local weapon = ent:GetActiveWeapon()
         if IsValid(weapon) then
-			weapon:SetMaterial("")  -- Clear the world model material
+			weapon:SetMaterial("")
         end
 	end
 end
 
 if CLIENT then
-	hook.Add("PreDrawViewModel", "SetFrozenMaterialViewModel", function(vm, ply, weapon)
-		if ply.FreezeActive then
-			if IsValid(vm) then
-				vm:SetMaterial("status/frozen")  -- Apply the frozen material
-			end
-			
-			if IsValid(ply:GetHands()) then
-				ply:GetHands():SetMaterial("status/frozen")
-			end
-			
-			
-		else
-			if IsValid(vm) then
-				vm:SetMaterial("")  -- Apply the frozen material
-			end
-			
-			if IsValid(ply:GetHands()) then
-				ply:GetHands():SetMaterial("")
-			end
+	hook.Add("RenderScreenspaceEffects", "FrozenEffect", function()
+		local ply = LocalPlayer()
+		if ply:GetNWBool("FreezeActive", false) then
+			DrawMaterialOverlay("status/frozenoverlay", 0)
 		end
-	end)
-	
-	hook.Add( "RenderScreenspaceEffects", "FrozenEffect", function()
-		local ply = LocalPlayer()
-		if ply.FreezeActive then
-			DrawMaterialOverlay( "status/frozenoverlay", 0 )
-		end
-	end )
-	
-	net.Receive("SetFrozenMaterial", function()
-		local ply = LocalPlayer()
-		ply.FreezeActive = true
-	end)
-
-	net.Receive("ClearFrozenMaterial", function()
-		local ply = LocalPlayer()
-		ply.FreezeActive = false
 	end)
 end
 
@@ -245,18 +210,43 @@ function ENT:Think()
         local phys = self:GetPhysicsObject()
         if IsValid(phys) then
             local velocity = phys:GetVelocity()
-
 			if velocity:Length() > 10 then
 				local desiredDir = velocity:GetNormalized()
 				local targetAng = desiredDir:Angle()
-
 				self:SetAngles(targetAng)
 				phys:SetVelocity(velocity)
 			end
         end
     end
 
-    -- Call Think every frame
     self:NextThink(CurTime())
     return true
 end
+
+hook.Add("EntityTakeDamage", "FrozenDeathHandler", function(ent, dmginfo)
+    if ent:Health() <= dmginfo:GetDamage() and ent:GetNWBool("FreezeActive", false) then
+		EmitSound("physics/glass/glass_sheet_break2.wav", ent:GetPos(), 0, CHAN_STATIC, 2, 75)
+		--ParticleEffectAttach("ice_bomb_shatter", PATTACH_ABSORIGIN, ent, 0)
+		if ent:IsPlayer() then
+			ent:SetMaterial("")
+				
+			local weapon = ent:GetActiveWeapon()
+			if IsValid(weapon) then
+				weapon:SetMaterial("")
+			end
+				
+			ent:SetNWBool("FreezeActive", false)
+		end
+    end
+end)
+
+hook.Add("CreateClientsideRagdoll", "RemoveFrozenRagdoll", function(ent, ragdoll)
+    if ent:GetNWBool("FreezeActive", false) then
+        timer.Simple(0, function()
+			ragdoll:CreateParticleEffect("ice_bomb_shatter", 0, {PATTACH_ABSORIGIN, nil, nil,})
+            if IsValid(ragdoll) then
+                ragdoll:Remove()
+            end
+        end)
+    end
+end)

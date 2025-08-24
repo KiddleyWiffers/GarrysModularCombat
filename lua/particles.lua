@@ -18,6 +18,7 @@ PrecacheParticleSystem( "teleportedin_red" )
 PrecacheParticleSystem( "teleportedin_white" )
 PrecacheParticleSystem( "teleportedin_yellow" )
 PrecacheParticleSystem( "teleported_flash" )
+PrecacheParticleSystem( "teleported_flash2" )
 PrecacheParticleSystem("critgun_weaponmodel_colorable")
 PrecacheParticleSystem("peejar_drips_colorable")
 

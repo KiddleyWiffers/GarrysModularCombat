@@ -254,7 +254,7 @@ function TOOL.BuildCPanel(panel)
 	end
 	
 	ammoTypeDropdown.OnSelect = function(self,index,value)
-		LocalPlayer():ConCommand("gmc_weselector_tool_extra1 " .. ammoTypeDropdown:GetValue())
+		LocalPlayer():ConCommand("gmc_weselector_tool_extra1 " .. tostring(ammoTypeDropdown:GetValue()))
 	end
 	
 	ammoSlider.OnValueChanged = function(self,index,value)

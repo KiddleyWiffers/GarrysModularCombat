@@ -24,11 +24,19 @@ ENT.Owner = nil -- The Entities owner
 ENT.BeingPunted = false -- If the entity is being punted with the gravity gun or not
 ENT.HoldSound = nil -- The ID of the holdsound
 ENT.Unbreakable = false
+ENT.Level = nil
+ENT.FriendlyFire = true
 
 function ENT:Initialize()
 	self:SetModel("models/Combine_Helicopter/helicopter_bomb01.mdl")
 	self:DrawShadow( false )
 	self:SetMaterial("Models/effects/comball_sphere")
+	
+	if engine.ActiveGamemode() == "gmc" and self.Level then
+		self.Damage = 50 + (10 * self.Level)
+		self.HP = 100 + (10 * self.Level)
+		self.FriendlyFire = false
+	end
 	
 	self:PhysicsInitSphere(20, SOLID_VPHYSICS)
 	local phys = self:GetPhysicsObject()
@@ -152,7 +160,7 @@ function ENT:Think()
 			local effectData = EffectData()
 			effectData:SetOrigin(self:GetPos())
 			util.Effect("AR2Explosion", effectData)
-					
+			
 			self:EmitSound("NPC_CombineBall.Explosion")
 			util.ScreenShake(self:GetPos(), 20, 150, 1, 1250)
 					
@@ -164,6 +172,10 @@ function ENT:Think()
 				material="sprites/lgtning.vmt"
 			})
 			
+			self.IsHeldByPlayer = false
+			if self.HoldSound != nil then 
+				self:StopLoopingSound(self.HoldSound) 
+			end
 			self:Remove()
 		end
 	end
@@ -203,7 +215,20 @@ function ENT:PhysicsCollide(data, phys)
         dmgInfo:SetInflictor(self)
         dmgInfo:SetDamageType(DMG_DISSOLVE)
 
-        hitEntity:TakeDamageInfo(dmgInfo)
+		if self.FriendlyFire then
+			hitEntity:TakeDamageInfo(dmgInfo)
+		else
+			local plyteam = self.Owner:Team()
+			local hitteam = hitEntity.GMCTeam
+			if hitteam == nil and hitEntity:IsPlayer() then
+				hitteam = hitEntity:Team()
+			end
+			if plyteam == 5 and hitEntity.Owner != self.Owner and hitEntity != self.Owner then
+				hitEntity:TakeDamageInfo(dmgInfo)
+			elseif plyteam == hitteam or plyteam then
+				hitEntity:TakeDamageInfo(dmgInfo)
+			end
+		end
 		
 		if dmgInfo:GetDamage() >= hitEntity:Health() && hitEntity:GetMaxHealth() > 1 then
 			EmitSound( "NPC_CombineBall.KillImpact", self:GetPos(), 0, CHAN_AUTO, 1, 75 )

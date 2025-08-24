@@ -30,13 +30,27 @@ if SERVER then
     function ENT:StartBurning()
         local entities = ents.FindInSphere(self:GetPos(), self.IgniteRadius)
         for _, ent in ipairs(entities) do
-            if ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot() then
-                self:StartBurnDamage(ent, self.Owner)
-
+			local function DoLogic(target)
+				self:StartBurnDamage(target, self.Owner)
+				timer.Simple(self.BurnTime, function() target.Burning = false end)
+				
                 net.Start("FireBombParticles")
-                net.WriteEntity(ent)
-				net.WriteInt(self.BurnTime, 8)
+					net.WriteEntity(target)
+					net.WriteInt(self.BurnTime, 8)
                 net.Broadcast()
+			end
+            if ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot() then
+                if self.FriendlyFire then
+					DoLogic(ent)
+				else
+					local plyteam = self.Owner:Team()
+					local hitteam = ent.GMCTeam or ent:Team()
+					if plyteam == 5 and ent.Owner != self.Owner and ent != self.Owner then
+						DoLogic(ent)
+					elseif plyteam == hitteam or plyteam == ent.GMCTeam then
+						DoLogic(ent)
+					end
+				end
             end
         end
 
@@ -48,28 +62,32 @@ if SERVER then
     end
 
     function ENT:StartBurnDamage(ent, attacker)
-        local burnDuration = self.BurnTime
-        local burnDamage = self.Damage
+		if !ent.Burning then
+			local burnDuration = self.BurnTime
+			local burnDamage = self.Damage
+			ent.Burning = true
+			
+			local dmgInfo = DamageInfo()
+			dmgInfo:SetDamage(burnDamage)
+			dmgInfo:SetAttacker(attacker or self)
+			dmgInfo:SetInflictor(self)
+			dmgInfo:SetDamageType(DMG_SLOWBURN)
 
-        timer.Create("BurnDamage_" .. ent:EntIndex(), 0.5, burnDuration * 2, function()
-            if IsValid(ent) and ent:WaterLevel() < 2 and (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) then
-                local dmgInfo = DamageInfo()
-                dmgInfo:SetDamage(burnDamage)
-                dmgInfo:SetAttacker(attacker or self)
-                dmgInfo:SetInflictor(self)
-                dmgInfo:SetDamageType(DMG_SLOWBURN)
-                ent:TakeDamageInfo(dmgInfo)
-            else
-                timer.Remove("BurnDamage_" .. ent:EntIndex())
-            end
-        end)
+			timer.Create("BurnDamage_" .. ent:EntIndex(), 0.5, burnDuration * 2, function()
+				if IsValid(ent) and ent:WaterLevel() < 2 and (ent:IsPlayer() or ent:IsNPC() or ent:IsNextBot()) then
+					ent:TakeDamageInfo(dmgInfo)
+				else
+					timer.Remove("BurnDamage_" .. ent:EntIndex())
+				end
+			end)
 
-        hook.Add("OnEntityKilled", "StopBurnEffect_" .. ent:EntIndex(), function(victim)
-            if victim == ent then
-                timer.Remove("BurnDamage_" .. ent:EntIndex())
-                hook.Remove("OnEntityKilled", "StopBurnEffect_" .. ent:EntIndex())
-            end
-        end)
+			hook.Add("OnEntityKilled", "StopBurnEffect_" .. ent:EntIndex(), function(victim)
+				if victim == ent then
+					timer.Remove("BurnDamage_" .. ent:EntIndex())
+					hook.Remove("OnEntityKilled", "StopBurnEffect_" .. ent:EntIndex())
+				end
+			end)
+		end
     end
 end
 

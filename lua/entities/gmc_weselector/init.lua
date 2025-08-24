@@ -43,10 +43,11 @@ end)
 -- Initialize the entity
 function ENT:Initialize()
 	self:SetModel("models/props_combine/combine_mine01.mdl")
+	self:SetUseType(SIMPLE_USE)
 	
-	self:PhysicsInit( SOLID_VPHYSICS )
-	self:SetMoveType( MOVETYPE_NONE)
-	self:SetSolid( SOLID_VPHYSICS )
+	self:PhysicsInitBox( Vector(-15,-15,-0), Vector(15,15,5))
+	self:SetSolid(SOLID_VPHYSICS)
+	self:SetMoveType(MOVETYPE_NONE)
 	
 	if self.display == nil then
 		self.display = ents.Create("prop_physics")

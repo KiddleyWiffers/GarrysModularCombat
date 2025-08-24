@@ -16,6 +16,8 @@ ENT.AdminOnly = false
 ENT.BurnTime = 10
 ENT.Damage = 4
 ENT.IgniteRadius = 300
+ENT.Level = nil
+ENT.FriendlyFire = true
 
 function ENT:Initialize()
     self:SetModel("models/weapons/w_models/w_flaregun_shell.mdl")
@@ -27,6 +29,12 @@ function ENT:Initialize()
 		phys:EnableDrag(true)
 		phys:EnableGravity(true)
     end
+	
+	if engine.ActiveGamemode() == "gmc" and self.Level then
+		self.BurnTime = 5 + (1 * self.Level)
+		self.IgniteRadius = 200 + (20 * self.Level)
+		self.FriendlyFire = false
+	end
     
     self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetCollisionGroup(COLLISION_GROUP_PROJECTILE)
@@ -78,6 +86,8 @@ if SERVER then
             proxy.BurnTime = self.BurnTime
             proxy.Damage = self.Damage
             proxy.IgniteRadius = self.IgniteRadius
+			proxy.Level = self.Level
+			proxy.FriendlyFire = self.FriendlyFire
             proxy:Spawn()
             proxy:Activate()
         end
